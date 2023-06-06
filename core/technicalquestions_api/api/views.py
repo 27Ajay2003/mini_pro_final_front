@@ -51,11 +51,9 @@ class GenerateTechnicalQuestionsView(APIView):
         questions = []
         for subject, subject_questions in questions_by_subject.items():
             questions += sample(subject_questions, 10)
-
         # Serialize the questions data to JSON
         data = [{
             'question_id': question.question_id,
-            'index': count+1,
             'topic': question.topic,
             'question': question.question,
             'option_a': question.option_a,
@@ -67,6 +65,9 @@ class GenerateTechnicalQuestionsView(APIView):
             'cognitive_level': question.cognitive_level,
             'subject': question.subject,
         } for count,question in enumerate(questions)]
+        sorted_data = sorted(data, key=lambda x: x['question_id'])
+        for i, question in enumerate(sorted_data):
+            question['index'] = i + 1
 
         # Return the questions data in a JSON response
         try:
@@ -80,7 +81,7 @@ class GenerateTechnicalQuestionsView(APIView):
         test_time.save()
         
         
-        return Response(data)
+        return Response(sorted_data)
     
 
 class SimilarQuestionsView(APIView):
@@ -98,7 +99,7 @@ class SimilarQuestionsView(APIView):
         try_final_tests = ResultTest.objects.filter(user__username=user_name)
         
         if not try_final_tests:
-            return Response({'error': 'No ResultTest found for the specified username'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'You have not attempted any tests'}, status=status.HTTP_404_NOT_FOUND)
 
         wrong_question_ids_counter = Counter()
         top_wrong_question_ids = []
@@ -284,9 +285,22 @@ class SimilarQuestionsView(APIView):
                 question_with_index = {**question, "index": index}
                 final_questions_data.append(question_with_index)
                 index += 1  
+        try:
+            user = User.objects.get(username=user_name)
+        except:
+            return Response({'error': 'No user exists'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        sorted_data = sorted(final_questions_data, key=lambda x: x['question_id'])
+        for i, question in enumerate(sorted_data):
+            question['index'] = i + 1
         
 
-        return JsonResponse(final_questions_data,safe=False)
+# create and save the ResultTest object
+        test_time = TimeElapsed(user=user)
+        test_time.save()
+        
+
+        return JsonResponse(sorted_data,safe=False)
 
 
 
@@ -348,7 +362,7 @@ class ResultTestUserView(generics.ListAPIView):
 
     def get_queryset(self):
         print(self.request.user)
-        return ResultTest.objects.filter(user=self.request.user)
+        return ResultTest.objects.filter(user=self.request.user).order_by('-test_date')
     
 class LatestResultTestUserView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
