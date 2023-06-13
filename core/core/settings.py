@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'corsheaders',
     'rest_framework',
+    'drf_yasg',
 
     'authentication.apps.AuthenticationConfig',
     'technicalquestions_api.apps.TechnicalquestionsApiConfig',
@@ -156,3 +157,7 @@ SIMPLE_JWT = {
 }
 
 AUTH_USER_MODEL = 'authentication.User'
+
+SWAGGER_SETTINGS = {
+    'DEFAULT_INFO': 'path.to.swagger_info',
+}
